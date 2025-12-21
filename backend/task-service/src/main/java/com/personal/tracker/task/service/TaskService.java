@@ -106,10 +106,9 @@ public class TaskService {
                     Instant now = Instant.now();
 
                     if (desiredStatus == TaskStatus.IN_PROGRESS) {
-                        if (startDate == null) {
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date is required to start a task"));
-                        }
-                        Instant startInstant = startDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+                        Instant startInstant = startDate != null
+                                ? startDate.atStartOfDay(ZoneOffset.UTC).toInstant()
+                                : now;
                         task.setStatus(TaskStatus.IN_PROGRESS);
                         task.setStartedAt(startInstant);
                         task.setUpdatedAt(now);
@@ -117,23 +116,23 @@ public class TaskService {
                     }
 
                     if (desiredStatus == TaskStatus.CLOSED) {
-                        LocalDate effectiveStartDate = startDate;
-                        if (task.getStartedAt() != null) {
-                            effectiveStartDate = task.getStartedAt().atZone(ZoneOffset.UTC).toLocalDate();
-                        }
+                        LocalDate existingStartDate = task.getStartedAt() != null
+                                ? task.getStartedAt().atZone(ZoneOffset.UTC).toLocalDate()
+                                : null;
+                        LocalDate effectiveStartDate = startDate != null ? startDate : existingStartDate;
                         if (effectiveStartDate == null) {
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date is required before closing a task"));
                         }
-                        if (closeDate == null) {
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Close date is required to close a task"));
-                        }
-                        if (!closeDate.isAfter(effectiveStartDate)) {
+
+                        LocalDate effectiveCloseDate = closeDate != null ? closeDate : LocalDate.now(ZoneOffset.UTC);
+                        if (!effectiveCloseDate.isAfter(effectiveStartDate)) {
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Close date must be after the start date"));
                         }
+
                         if (task.getStartedAt() == null) {
                             task.setStartedAt(effectiveStartDate.atStartOfDay(ZoneOffset.UTC).toInstant());
                         }
-                        Instant closeInstant = closeDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+                        Instant closeInstant = effectiveCloseDate.atStartOfDay(ZoneOffset.UTC).toInstant();
                         task.setStatus(TaskStatus.CLOSED);
                         task.setClosedAt(closeInstant);
                         task.setArchivedAt(closeInstant);

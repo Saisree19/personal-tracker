@@ -212,6 +212,10 @@ function App() {
     return Array.from(names).sort((a, b) => a.localeCompare(b))
   }, [tasks])
 
+  const visibleTasks = useMemo(() => {
+    return includeArchived ? tasks.filter((t) => t.status === 'CLOSED') : tasks.filter((t) => t.status !== 'CLOSED')
+  }, [tasks, includeArchived])
+
   const trendPoints = useMemo(() => {
     if (!report) return []
     return report.productivityTrend.map((item) => ({
@@ -220,10 +224,10 @@ function App() {
     }))
   }, [report])
 
-  const totalTaskPages = Math.max(1, Math.ceil(tasks.length / TASKS_PER_PAGE))
+  const totalTaskPages = Math.max(1, Math.ceil(visibleTasks.length / TASKS_PER_PAGE))
   const sortedTasks = useMemo(() => {
     const rank = (c: TaskComplexity) => complexityOrder.indexOf(c)
-    return [...tasks].sort((a, b) => {
+    return [...visibleTasks].sort((a, b) => {
       if (sortField === 'due') {
         const aDate = a.deadlineDate ? new Date(a.deadlineDate).getTime() : Number.POSITIVE_INFINITY
         const bDate = b.deadlineDate ? new Date(b.deadlineDate).getTime() : Number.POSITIVE_INFINITY
@@ -234,7 +238,7 @@ function App() {
       const diff = rank(a.complexity) - rank(b.complexity)
       return sortDirection === 'asc' ? diff : -diff
     })
-  }, [tasks, sortField, sortDirection])
+  }, [visibleTasks, sortField, sortDirection])
   const paginatedTasks = useMemo(() => {
     const start = (taskPage - 1) * TASKS_PER_PAGE
     return sortedTasks.slice(start, start + TASKS_PER_PAGE)
@@ -264,14 +268,14 @@ function App() {
   }, [authMode, otpTimer])
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(tasks.length / TASKS_PER_PAGE))
+    const maxPage = Math.max(1, Math.ceil(visibleTasks.length / TASKS_PER_PAGE))
     if (taskPage > maxPage) {
       setTaskPage(maxPage)
     }
-    if (tasks.length === 0 && taskPage !== 1) {
+    if (visibleTasks.length === 0 && taskPage !== 1) {
       setTaskPage(1)
     }
-  }, [taskPage, tasks])
+  }, [taskPage, visibleTasks])
 
   function handleUnauthorized() {
     setToken('')
@@ -579,34 +583,30 @@ function App() {
 
     const task = tasks.find((t) => t.id === taskId)
     const existingStart = toDateInputValue(task?.startedAt ?? null)
-    const startDateValue = startDate?.trim() || existingStart
+    const startDateValue = startDate?.trim() || existingStart || ''
     const closeDateValue = closeDate?.trim() || ''
 
     if (status === 'CLOSED') {
       if (!task || task.status !== 'IN_PROGRESS') {
-        setTaskError('Start the task before closing it.')
+          setTaskError('Please start the task before closing it.')
         return
       }
-    }
-
-    if (status === 'IN_PROGRESS' && !startDateValue) {
-      setTaskError('Select a start date to start the task.')
-      return
     }
 
     if (status === 'CLOSED') {
-      if (!startDateValue) {
+      const effectiveStart = startDateValue || existingStart || ''
+      if (!effectiveStart) {
         setTaskError('Select a start date before closing the task.')
         return
       }
-      if (!closeDateValue) {
-        setTaskError('Select a close date before closing the task.')
-        return
-      }
-      if (new Date(closeDateValue) <= new Date(startDateValue)) {
+      const effectiveClose = closeDateValue || new Date().toISOString().slice(0, 10)
+      if (new Date(effectiveClose) <= new Date(effectiveStart)) {
         setTaskError('Close date must be after the start date.')
         return
       }
+      // ensure we send the effective defaults when user left them blank
+      startDate = startDate || effectiveStart
+      closeDate = closeDate || effectiveClose
     }
 
     setTaskError('')
@@ -980,8 +980,10 @@ function App() {
               {taskError && <p className="error">{taskError}</p>}
               <div className="task-table-wrapper">
                 {taskLoading && <p className="hint">Loading tasks…</p>}
-                {!taskLoading && tasks.length === 0 && <p className="hint">No tasks yet. Create one to get started.</p>}
-                {!taskLoading && tasks.length > 0 && (
+                {!taskLoading && visibleTasks.length === 0 && (
+                  <p className="hint">{includeArchived ? 'No archived tasks to show.' : 'No tasks yet. Create one to get started.'}</p>
+                )}
+                {!taskLoading && visibleTasks.length > 0 && (
                   <table className="task-table">
                     <thead>
                       <tr>
@@ -1062,7 +1064,7 @@ function App() {
                   </table>
                 )}
               </div>
-              {tasks.length > TASKS_PER_PAGE && (
+              {visibleTasks.length > TASKS_PER_PAGE && (
                 <div className="pagination">
                   <strong>
                     Page {taskPage} of {totalTaskPages}
@@ -1365,21 +1367,24 @@ function TaskRow({
   }
 
   const handleClose = async () => {
-    const effectiveStart = startDateInput || toDateInputValue(task.startedAt ?? null)
+    if (task.status !== 'IN_PROGRESS') {
+      setStatusError('Please start the task before closing it.')
+      window.alert('Please start the task before closing it.')
+      return
+    }
+    const effectiveStart = startDateInput?.trim()
     if (!effectiveStart) {
       setStatusError('Select a start date before closing.')
+      window.alert('Start date is mandatory to close the task.')
       return
     }
-    if (!closeDateInput) {
-      setStatusError('Select a close date to close the task.')
-      return
-    }
-    if (new Date(closeDateInput) <= new Date(effectiveStart)) {
+    const effectiveClose = closeDateInput || new Date().toISOString().slice(0, 10)
+    if (new Date(effectiveClose) <= new Date(effectiveStart)) {
       setStatusError('Close date must be after the start date.')
       return
     }
     setStatusError('')
-    await onUpdateStatus(task.id, 'CLOSED', effectiveStart, closeDateInput)
+    await onUpdateStatus(task.id, 'CLOSED', effectiveStart, effectiveClose)
   }
 
   return (
@@ -1455,7 +1460,7 @@ function TaskRow({
                         />
                         <button
                           className="btn-sm primary"
-                          disabled={isArchived || task.status !== 'IN_PROGRESS'}
+                          disabled={isArchived}
                           onClick={(e) => { e.stopPropagation(); void handleClose() }}
                         >
                           Close task

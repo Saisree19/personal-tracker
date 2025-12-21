@@ -23,5 +23,5 @@ management:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:dev-secret-key-32-chars-long-123456}
+    secret: ${JWT_SECRET}
     ttl: PT1H
