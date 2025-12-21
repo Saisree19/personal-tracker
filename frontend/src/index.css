@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-primary);
+  background-color: var(--body-bg);
+  --body-bg: #0a0d18;
+  --page-bg: radial-gradient(circle at 20% 20%, #101425, #0a0d18 45%),
+    linear-gradient(135deg, #0d152a 0%, #0c1a3a 60%, #0a0f1f 100%);
+  --hero-bg: linear-gradient(120deg, rgba(99, 120, 255, 0.12), rgba(74, 198, 183, 0.12));
+  --text-primary: #e7ebff;
+  --text-strong: #dfe6ff;
+  --text-muted: #c5cce8;
+  --text-faint: #9aa5c8;
+  --text-error: #f7a6b8;
+  --card-bg: rgba(255, 255, 255, 0.02);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --card-border-strong: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --ghost-bg: rgba(255, 255, 255, 0.06);
+  --ghost-border: rgba(255, 255, 255, 0.12);
+  --chip-bg: #e7ebff;
+  --chip-border: rgba(255, 255, 255, 0.25);
+  --accent: #7c8ce1;
+  --pill-archived-bg: rgba(248, 158, 168, 0.15);
+  --pill-archived-border: rgba(248, 158, 168, 0.5);
+  --bar-track: rgba(255, 255, 255, 0.06);
+  --tooltip-bg: #0c1120;
+}
+
+:root[data-theme='light'] {
+  --body-bg: #f7f8fb;
+  --page-bg: radial-gradient(circle at 20% 20%, #f5f7ff, #eef1fb 45%),
+    linear-gradient(135deg, #edf2ff 0%, #e9f5ff 60%, #f7f9ff 100%);
+  --hero-bg: linear-gradient(120deg, rgba(124, 140, 225, 0.2), rgba(74, 198, 183, 0.18));
+  --text-primary: #0b1020;
+  --text-strong: #0b1020;
+  --text-muted: #1d2745;
+  --text-faint: #3c4460;
+  --text-error: #c03557;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(12, 17, 32, 0.06);
+  --card-border-strong: rgba(12, 17, 32, 0.12);
+  --card-shadow: 0 14px 40px rgba(12, 17, 32, 0.12);
+  --input-bg: rgba(12, 17, 32, 0.04);
+  --input-border: rgba(12, 17, 32, 0.12);
+  --ghost-bg: rgba(12, 17, 32, 0.06);
+  --ghost-border: rgba(12, 17, 32, 0.12);
+  --chip-bg: #0b1020;
+  --chip-border: rgba(12, 17, 32, 0.15);
+  --accent: #4f46e5;
+  --pill-archived-bg: rgba(192, 53, 87, 0.12);
+  --pill-archived-border: rgba(192, 53, 87, 0.4);
+  --bar-track: rgba(12, 17, 32, 0.08);
+  --tooltip-bg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--body-bg);
+}
+
+p {
+  margin: 0.1rem 0 0.35rem 0;
+}
+
+a {
+  color: inherit;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Better touch targets */
+  button {
+    min-height: 44px; /* iOS recommended touch target size */
+  }
+
+  /* Prevent text size adjustment on iOS */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Better scrolling */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+}

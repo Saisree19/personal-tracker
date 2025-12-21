@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: auth-service
+  r2dbc:
+    url: r2dbc:h2:mem:///authdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+
+security:
+  jwt:
+    secret: test-secret-key-32-characters-long
+    ttl: PT1H
+
+auth:
+  init-demo-user: false

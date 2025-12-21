@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: task-service
+  r2dbc:
+    url: ${R2DBC_URL:r2dbc:postgresql://localhost:5432/personal_tracker_task}
+    username: ${R2DBC_USERNAME:tracker}
+    password: ${R2DBC_PASSWORD:tracker}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-key-32-chars-long-123456}
+    ttl: PT1H
