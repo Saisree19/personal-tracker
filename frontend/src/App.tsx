@@ -585,10 +585,20 @@ function App() {
     const existingStart = toDateInputValue(task?.startedAt ?? null)
     const startDateValue = startDate?.trim() || existingStart || ''
     const closeDateValue = closeDate?.trim() || ''
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const today = new Date(todayStr)
 
     if (status === 'CLOSED') {
       if (!task || task.status !== 'IN_PROGRESS') {
           setTaskError('Please start the task before closing it.')
+        return
+      }
+    }
+
+    if (startDateValue) {
+      const start = new Date(startDateValue)
+      if (start > today) {
+        setTaskError('Start date cannot be in the future.')
         return
       }
     }
@@ -599,9 +609,15 @@ function App() {
         setTaskError('Select a start date before closing the task.')
         return
       }
-      const effectiveClose = closeDateValue || new Date().toISOString().slice(0, 10)
-      if (new Date(effectiveClose) <= new Date(effectiveStart)) {
-        setTaskError('Close date must be after the start date.')
+      const effectiveClose = closeDateValue || todayStr
+      const start = new Date(effectiveStart)
+      const close = new Date(effectiveClose)
+      if (close > today) {
+        setTaskError('Close date cannot be in the future.')
+        return
+      }
+      if (close < start) {
+        setTaskError('Close date must be on or after the start date.')
         return
       }
       // ensure we send the effective defaults when user left them blank
@@ -612,8 +628,16 @@ function App() {
     setTaskError('')
     try {
       const payload: { status: TaskStatus; startDate?: string; closeDate?: string } = { status }
-      if (startDateValue) payload.startDate = startDateValue
-      if (closeDateValue) payload.closeDate = closeDateValue
+      if (startDate) {
+        payload.startDate = startDate
+      } else if (startDateValue) {
+        payload.startDate = startDateValue
+      }
+      if (closeDate) {
+        payload.closeDate = closeDate
+      } else if (closeDateValue) {
+        payload.closeDate = closeDateValue
+      }
 
       const res = await fetch(`${TASK_URL}/api/tasks/${taskId}/status`, {
         method: 'POST',

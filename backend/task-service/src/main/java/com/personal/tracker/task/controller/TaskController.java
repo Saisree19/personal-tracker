@@ -5,12 +5,12 @@ import java.util.UUID;
 import com.personal.tracker.common.error.ApiError;
 import com.personal.tracker.task.dto.TaskCreateRequest;
 import com.personal.tracker.task.dto.TaskNoteRequest;
+import com.personal.tracker.task.dto.TaskPageResponse;
 import com.personal.tracker.task.dto.TaskResponse;
 import com.personal.tracker.task.dto.TaskStatusUpdateRequest;
 import com.personal.tracker.task.dto.TaskUpdateRequest;
 import com.personal.tracker.task.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -143,19 +142,25 @@ public class TaskController {
     @GetMapping
         @Operation(
             summary = "List tasks",
-            description = "List tasks for the authenticated user with optional archived inclusion",
+            description = "List tasks for the authenticated user with optional archived-only view, paging, and sorting",
             responses = {
                 @ApiResponse(responseCode = "200", description = "Tasks listed",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        array = @ArraySchema(schema = @Schema(implementation = TaskResponse.class)))),
+                        schema = @Schema(implementation = TaskPageResponse.class))),
                 @ApiResponse(responseCode = "401", description = "Unauthorized",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                         schema = @Schema(implementation = ApiError.class)))
             }
         )
-    public Flux<TaskResponse> listTasks(@RequestParam(value = "includeArchived", defaultValue = "false") boolean includeArchived, Authentication authentication) {
+    public Mono<TaskPageResponse> listTasks(
+            @RequestParam(value = "includeArchived", defaultValue = "false") boolean includeArchived,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "sortField", defaultValue = "due") String sortField,
+            @RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
+            Authentication authentication) {
         String userId = authentication.getName();
-        return taskService.listTasks(userId, includeArchived);
+        return taskService.listTasks(userId, includeArchived, page, size, sortField, sortDirection);
     }
 
     @GetMapping("/{id}")
