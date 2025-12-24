@@ -35,11 +35,11 @@ public class TaskService {
     private final TaskMapper taskMapper;
     private final R2dbcEntityTemplate template;
 
-    private static final Map<String, String> ALLOWED_SORT_FIELDS = Map.of(
-            "due", "deadline_date",
+        private static final Map<String, String> ALLOWED_SORT_FIELDS = Map.of(
+            "due", "deadlineDate",
             "complexity", "complexity",
-            "created", "created_at"
-    );
+            "created", "createdAt"
+        );
 
     public TaskService(TaskRepository taskRepository, TaskNoteRepository taskNoteRepository, TaskMapper taskMapper,
             R2dbcEntityTemplate template) {
@@ -185,11 +185,11 @@ public class TaskService {
         int offset = (safePage - 1) * safeSize;
 
         String normalizedSortField = sortField == null ? "due" : sortField.toLowerCase();
-        String column = ALLOWED_SORT_FIELDS.getOrDefault(normalizedSortField, "deadline_date");
+        String property = ALLOWED_SORT_FIELDS.getOrDefault(normalizedSortField, "deadlineDate");
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Sort sort = Sort.by(direction, column);
+        Sort sort = Sort.by(direction, property);
 
-        Criteria criteria = Criteria.where("user_id").is(userId);
+        Criteria criteria = Criteria.where("userId").is(userId);
         if (includeArchived) {
             criteria = criteria.and("status").is(TaskStatus.CLOSED);
         } else {

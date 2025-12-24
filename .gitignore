@@ -117,6 +117,7 @@ failsafe-reports/
 # Application specific
 application-local.yml
 application-secrets.yml
+backend/env.local.sh
 *.keystore
 *.jks
 

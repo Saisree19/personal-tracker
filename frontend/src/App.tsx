@@ -30,6 +30,15 @@ type TaskResponse = {
   notes: TaskNoteResponse[]
 }
 
+type TaskPageResponse = {
+  content: TaskResponse[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  includeArchived: boolean
+}
+
 type ReportResponse = {
   applicationSummaries: { application: string; completedCount: number }[]
   complexityDistribution: {
@@ -105,6 +114,8 @@ function App() {
   const [isResending, setIsResending] = useState(false)
   const [tasks, setTasks] = useState<TaskResponse[]>([])
   const [taskPage, setTaskPage] = useState(1)
+  const [taskTotalPages, setTaskTotalPages] = useState(1)
+  const [taskTotalElements, setTaskTotalElements] = useState(0)
   const [taskError, setTaskError] = useState<string>('')
   const [taskLoading, setTaskLoading] = useState(false)
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
@@ -212,10 +223,6 @@ function App() {
     return Array.from(names).sort((a, b) => a.localeCompare(b))
   }, [tasks])
 
-  const visibleTasks = useMemo(() => {
-    return includeArchived ? tasks.filter((t) => t.status === 'CLOSED') : tasks.filter((t) => t.status !== 'CLOSED')
-  }, [tasks, includeArchived])
-
   const trendPoints = useMemo(() => {
     if (!report) return []
     return report.productivityTrend.map((item) => ({
@@ -224,32 +231,17 @@ function App() {
     }))
   }, [report])
 
-  const totalTaskPages = Math.max(1, Math.ceil(visibleTasks.length / TASKS_PER_PAGE))
-  const sortedTasks = useMemo(() => {
-    const rank = (c: TaskComplexity) => complexityOrder.indexOf(c)
-    return [...visibleTasks].sort((a, b) => {
-      if (sortField === 'due') {
-        const aDate = a.deadlineDate ? new Date(a.deadlineDate).getTime() : Number.POSITIVE_INFINITY
-        const bDate = b.deadlineDate ? new Date(b.deadlineDate).getTime() : Number.POSITIVE_INFINITY
-        const diff = aDate - bDate
-        return sortDirection === 'asc' ? diff : -diff
-      }
-      // complexity
-      const diff = rank(a.complexity) - rank(b.complexity)
-      return sortDirection === 'asc' ? diff : -diff
-    })
-  }, [visibleTasks, sortField, sortDirection])
-  const paginatedTasks = useMemo(() => {
-    const start = (taskPage - 1) * TASKS_PER_PAGE
-    return sortedTasks.slice(start, start + TASKS_PER_PAGE)
-  }, [taskPage, sortedTasks])
+  useEffect(() => {
+    if (!token) return
+    localStorage.setItem('tracker_token', token)
+    void loadTasks(taskPage)
+    void loadReport()
+  }, [token])
 
   useEffect(() => {
     if (!token) return
-    void loadTasks()
-    void loadReport()
-    localStorage.setItem('tracker_token', token)
-  }, [token, includeArchived])
+    void loadTasks(taskPage)
+  }, [taskPage, token])
 
   useEffect(() => {
     setAuthError('')
@@ -268,14 +260,13 @@ function App() {
   }, [authMode, otpTimer])
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(visibleTasks.length / TASKS_PER_PAGE))
-    if (taskPage > maxPage) {
-      setTaskPage(maxPage)
-    }
-    if (visibleTasks.length === 0 && taskPage !== 1) {
+    if (!token) return
+    if (taskPage !== 1) {
       setTaskPage(1)
+      return
     }
-  }, [taskPage, visibleTasks])
+    void loadTasks(1)
+  }, [includeArchived, sortField, sortDirection, token, taskPage])
 
   function handleUnauthorized() {
     setToken('')
@@ -300,6 +291,8 @@ function App() {
     setTaskForm({ title: '', description: '', application: '', complexity: 'MEDIUM', deadlineDate: '' })
     setIncludeArchived(false)
     setTasks([])
+    setTaskTotalElements(0)
+    setTaskTotalPages(1)
     setReport(null)
     setTaskError('')
     setReportError('')
@@ -483,12 +476,19 @@ function App() {
     }
   }
 
-  async function loadTasks() {
+  async function loadTasks(requestedPage = taskPage) {
     if (!token) return
     setTaskLoading(true)
     setTaskError('')
     try {
-      const res = await fetch(`${TASK_URL}/api/tasks?includeArchived=${includeArchived}`, {
+      const params = new URLSearchParams()
+      params.set('includeArchived', String(includeArchived))
+      params.set('page', String(requestedPage))
+      params.set('size', String(TASKS_PER_PAGE))
+      params.set('sortField', sortField)
+      params.set('sortDirection', sortDirection)
+
+      const res = await fetch(`${TASK_URL}/api/tasks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.status === 401) {
@@ -497,12 +497,31 @@ function App() {
       }
       if (res.status === 204 || res.status === 404) {
         setTasks([])
+        setTaskTotalElements(0)
+        setTaskTotalPages(1)
+        setTaskPage(1)
         return
       }
       if (!res.ok) throw new Error('Failed to load tasks')
-      const data = await res.json()
-      setTasks(data)
-      setTaskPage(1)
+      const data: TaskPageResponse | TaskResponse[] = await res.json()
+
+      // Backward compatibility: if backend still returns a plain array, fall back gracefully
+      if (Array.isArray(data)) {
+        setTasks(data)
+        setTaskTotalElements(data.length)
+        setTaskTotalPages(Math.max(1, Math.ceil(data.length / TASKS_PER_PAGE)))
+        setTaskPage(1)
+        return
+      }
+
+      const totalPages = Math.max(1, data.totalPages || 1)
+      const currentPage = Math.min(Math.max(1, data.page || requestedPage), totalPages)
+      if (currentPage !== requestedPage) {
+        setTaskPage(currentPage)
+      }
+      setTasks(Array.isArray(data.content) ? data.content : [])
+      setTaskTotalElements(data.totalElements ?? 0)
+      setTaskTotalPages(totalPages)
     } catch (err) {
       if (err instanceof TypeError) {
         setTaskError('Task service is unreachable. Please try again.')
@@ -532,7 +551,7 @@ function App() {
         throw new Error('Session expired')
       }
       if (!res.ok) throw new Error('Failed to create task')
-      await loadTasks()
+      await loadTasks(1)
       setTaskForm({ title: '', description: '', application: '', complexity: 'MEDIUM', deadlineDate: '' })
     } catch (err) {
       setTaskError(err instanceof Error ? err.message : 'Unable to create task')
@@ -572,7 +591,7 @@ function App() {
         throw new Error('Session expired')
       }
       if (!res.ok) throw new Error('Failed to update task')
-      await loadTasks()
+      await loadTasks(taskPage)
     } catch (err) {
       setTaskError(err instanceof Error ? err.message : 'Unable to update task')
     }
@@ -648,8 +667,22 @@ function App() {
         handleUnauthorized()
         throw new Error('Session expired')
       }
-      if (!res.ok) throw new Error('Failed to update status')
-      await loadTasks()
+      if (!res.ok) {
+        let message = 'Failed to update status'
+        try {
+          const body = await res.json()
+          if (body?.message) {
+            message = body.message
+          }
+        } catch (parseErr) {
+          const text = await res.text().catch(() => '')
+          if (text) {
+            message = text
+          }
+        }
+        throw new Error(message)
+      }
+      await loadTasks(taskPage)
     } catch (err) {
       setTaskError(err instanceof Error ? err.message : 'Unable to update status')
     }
@@ -1004,10 +1037,10 @@ function App() {
               {taskError && <p className="error">{taskError}</p>}
               <div className="task-table-wrapper">
                 {taskLoading && <p className="hint">Loading tasks…</p>}
-                {!taskLoading && visibleTasks.length === 0 && (
+                {!taskLoading && taskTotalElements === 0 && tasks.length === 0 && (
                   <p className="hint">{includeArchived ? 'No archived tasks to show.' : 'No tasks yet. Create one to get started.'}</p>
                 )}
-                {!taskLoading && visibleTasks.length > 0 && (
+                {!taskLoading && tasks.length > 0 && (
                   <table className="task-table">
                     <thead>
                       <tr>
@@ -1050,7 +1083,7 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedTasks.map((task) => {
+                      {tasks.map((task) => {
                         const isExpanded = expandedTaskId === task.id
                         const isEditing = editingTaskId === task.id
                         const isArchived = task.status === 'CLOSED'
@@ -1088,16 +1121,16 @@ function App() {
                   </table>
                 )}
               </div>
-              {visibleTasks.length > TASKS_PER_PAGE && (
+              {taskTotalPages > 1 && (
                 <div className="pagination">
                   <strong>
-                    Page {taskPage} of {totalTaskPages}
+                    Page {taskPage} of {taskTotalPages}
                   </strong>
                   <div className="pagination-controls">
                     <button className="ghost" disabled={taskPage === 1} onClick={() => setTaskPage((p) => Math.max(1, p - 1))} type="button">
                       Previous
                     </button>
-                    <button className="ghost" disabled={taskPage === totalTaskPages} onClick={() => setTaskPage((p) => Math.min(totalTaskPages, p + 1))} type="button">
+                    <button className="ghost" disabled={taskPage === taskTotalPages} onClick={() => setTaskPage((p) => Math.min(taskTotalPages, p + 1))} type="button">
                       Next
                     </button>
                   </div>
@@ -1384,7 +1417,12 @@ function TaskRow({
   }, [task.id, task.startedAt, task.closedAt])
 
   const handleStart = async () => {
-    const chosenStart = startDateInput || new Date().toISOString().slice(0, 10)
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const chosenStart = startDateInput || todayStr
+    if (new Date(chosenStart) > new Date(todayStr)) {
+      setStatusError('Start date cannot be in the future.')
+      return
+    }
     setStartDateInput(chosenStart)
     setStatusError('')
     await onUpdateStatus(task.id, 'IN_PROGRESS', chosenStart)
@@ -1393,18 +1431,25 @@ function TaskRow({
   const handleClose = async () => {
     if (task.status !== 'IN_PROGRESS') {
       setStatusError('Please start the task before closing it.')
-      window.alert('Please start the task before closing it.')
       return
     }
     const effectiveStart = startDateInput?.trim()
     if (!effectiveStart) {
       setStatusError('Select a start date before closing.')
-      window.alert('Start date is mandatory to close the task.')
       return
     }
-    const effectiveClose = closeDateInput || new Date().toISOString().slice(0, 10)
-    if (new Date(effectiveClose) <= new Date(effectiveStart)) {
-      setStatusError('Close date must be after the start date.')
+    const todayStr = new Date().toISOString().slice(0, 10)
+    if (new Date(effectiveStart) > new Date(todayStr)) {
+      setStatusError('Start date cannot be in the future.')
+      return
+    }
+    const effectiveClose = closeDateInput || todayStr
+    if (new Date(effectiveClose) > new Date(todayStr)) {
+      setStatusError('Close date cannot be in the future.')
+      return
+    }
+    if (new Date(effectiveClose) < new Date(effectiveStart)) {
+      setStatusError('Close date must be on or after the start date.')
       return
     }
     setStatusError('')

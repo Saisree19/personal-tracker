@@ -27,7 +27,12 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,loggers,env
+  endpoint:
+    loggers:
+      enabled: true
+    env:
+      enabled: true
 
 security:
   jwt:

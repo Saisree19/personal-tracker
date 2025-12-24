@@ -1,8 +1,8 @@
 ## 1. Specification
-- [ ] 1.1 Update task-manager spec with status validation, archived filtering, and server-driven sorting/pagination requirements
-- [ ] 1.2 Add visualization spec deltas for loading and no-data/error handling
-- [ ] 1.3 Add auth spec delta for JWT secret strength and startup validation
-- [ ] 1.4 Add new app-shell capability spec for unified error/loading UX and session handling
+- [x] 1.1 Update task-manager spec with status validation, archived filtering, and server-driven sorting/pagination requirements
+- [x] 1.2 Add visualization spec deltas for loading and no-data/error handling
+- [x] 1.3 Add auth spec delta for JWT secret strength and startup validation
+- [x] 1.4 Add new app-shell capability spec for unified error/loading UX and session handling
 
 ## 2. Implementation (after approval)
 - [ ] 2.1 Implement frontend status validation flows and archived-only view toggle
