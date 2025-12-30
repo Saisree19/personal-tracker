@@ -1,0 +1,41 @@
+server:
+  # Azure App Service provides PORT automatically
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: task-service
+
+  r2dbc:
+    # Azure PostgreSQL – no local defaults
+    url: ${R2DBC_URL}
+    username: ${R2DBC_USERNAME}
+    password: ${R2DBC_PASSWORD}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      enabled: true
+    info:
+      enabled: true
+
+security:
+  jwt:
+    # Must match auth-service JWT secret
+    secret: ${JWT_SECRET}
+    ttl: PT1H
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO

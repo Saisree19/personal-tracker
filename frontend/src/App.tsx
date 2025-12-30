@@ -79,7 +79,6 @@ const statusPalette: Record<TaskStatus, string> = {
 
 const accentColors = ['#7C8CE1', '#4AC6B7', '#E86F9E', '#F2C14E', '#6A4C93']
 const TASKS_PER_PAGE = 10
-const complexityOrder: TaskComplexity[] = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW']
 
 const toDateInputValue = (value?: string | null) => {
   if (!value) return ''

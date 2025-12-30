@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 public class HealthController {
 
     @GetMapping
-    public Mono<Map<String, String>> health() {
+    public Mono<Map<String, String>>health() {
         return Mono.just(Map.of("status", "ok", "service", "task"));
     }
 }

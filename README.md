@@ -181,6 +181,31 @@ The frontend will be available at `http://localhost:5173`
 2. Create an account using the Create account flow
 3. Log in and start using the application
 
+## 🐳 Docker Compose
+
+1) Copy env sample and adjust secrets/SMTP:
+
+```bash
+cp .env.example .env
+```
+
+2) Build and run everything (Postgres + all services + frontend):
+
+```bash
+docker compose up --build
+```
+
+Services exposed:
+- Auth: http://localhost:8081
+- Task: http://localhost:8082
+- Reporting: http://localhost:8083
+- Frontend: http://localhost:80
+
+Useful notes:
+- `JWT_SECRET` is required (set in `.env`).
+- Postgres is seeded with `personal_tracker_auth` and `personal_tracker_task` via `backend/db/init-multi-db.sql`.
+- Vite endpoints are baked at build time from `VITE_*` args in `.env`.
+
 
 ## 📚 API Documentation
 

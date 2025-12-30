@@ -1,0 +1,66 @@
+server:
+  # Azure App Service injects PORT automatically
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: auth-service
+
+  r2dbc:
+    # Azure PostgreSQL connection (no defaults here – fail fast if missing)
+    url: ${R2DBC_URL}
+    username: ${R2DBC_USERNAME}
+    password: ${R2DBC_PASSWORD}
+
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      enabled: true
+    info:
+      enabled: true
+
+security:
+  jwt:
+    # MUST be provided via Azure App Service config
+    secret: ${JWT_SECRET}
+    ttl: PT1H
+
+  reset:
+    # Deployed frontend URL (Azure / Netlify / Vercel)
+    frontend-url: ${RESET_FRONTEND_URL}
+
+mail:
+  smtp:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    from: ${SMTP_FROM}
+  sink:
+    # Disable mail sink in Azure (real emails only)
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
