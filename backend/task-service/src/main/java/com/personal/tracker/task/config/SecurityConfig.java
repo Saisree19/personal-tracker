@@ -20,7 +20,14 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers("/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        .pathMatchers(
+                            "/health",
+                            "/v3/api-docs/**",
+                            "/v3/api-docs.yaml",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/swagger-ui/index.html",
+                            "/webjars/**").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();
@@ -29,9 +36,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost", "http://127.0.0.1"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Authorization", "Location"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

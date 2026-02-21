@@ -1,0 +1,7 @@
+# Ignore build artifacts and VCS metadata
+**/target/
+**/.DS_Store
+**/.git
+**/.gitignore
+**/node_modules/
+**/.mvn/wrapper/maven-wrapper.jar
